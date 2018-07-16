@@ -1,0 +1,10 @@
+BadgeWX-Bootloader.c
+>compiler=C
+>memtype=cmm main ram compact
+>optimize=-Os
+>-m32bit-doubles
+>-fno-exceptions
+>-enable_pruning
+>defs::-std=c99
+>-lm
+>BOARD::GENERIC

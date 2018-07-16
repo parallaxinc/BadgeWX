@@ -5,6 +5,9 @@ Source/PowerButton/.vs/
 Source/PowerButton/BadgeWX_PowerT10/Debug/
 Source/PowerButton/BadgeWX_PowerT10/Release/
 
+#autorunBL auto-generated files
+Source/AutoRun/autorunBL/cmm/
+
 #ESP auto-generated files
 Release/ESP/*.a
 Release/ESP/*.out
