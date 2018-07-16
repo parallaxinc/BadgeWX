@@ -1,52 +1,13 @@
-# Prerequisites
-*.d
+# Files with these extensions (and sometimes folders) are intentionally ignored so as not to accidentally include auto-generated content in this repository.
 
-# Object files
-*.o
-*.ko
-*.obj
-*.elf
+#PowerButton auto-generated files
+Source/PowerButton/.vs/
+Source/PowerButton/BadgeWX_PowerT10/Debug/
+Source/PowerButton/BadgeWX_PowerT10/Release/
 
-# Linker output
-*.ilk
-*.map
-*.exp
+#ESP auto-generated files
+Release/ESP/*.a
+Release/ESP/*.out
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
-
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
-
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
-
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+#Ultra Edit
+*.bak
