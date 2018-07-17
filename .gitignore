@@ -4,6 +4,7 @@
 Source/PowerButton/.vs/
 Source/PowerButton/BadgeWX_PowerT10/Debug/
 Source/PowerButton/BadgeWX_PowerT10/Release/
+*.componentinfo.xml
 
 #autorunBL auto-generated files
 Source/AutoRun/autorunBL/cmm/
