@@ -1,9 +1,7 @@
 @echo off
 
 echo.
-echo ---This script built for Bash on Windows only---
-
-echo.
+echo Updating Release/Boot and /Core filesystem
 echo [Step 1 of 5]: Clean Release/tempfiles (if exists)
 cd ..
 if exist "Release/tempfiles/*.*" (
@@ -33,6 +31,12 @@ if not exist Release/tempfiles (
 if exist Source/Examples/*.html (
   cp --verbose --preserve Source/Examples/*.html Release/tempfiles/
 ) 
+if exist Source/Examples/*.gif ( 
+  cp --verbose --preserve Source/Examples/*.gif Release/tempfiles/
+)  
+if exist Source/Examples/*.jpg ( 
+  cp --verbose --preserve Source/Examples/*.jpg Release/tempfiles/
+)  
 if exist Source/Examples/*.png ( 
   cp --verbose --preserve Source/Examples/*.png Release/tempfiles/
 )  
@@ -42,7 +46,7 @@ cp --verbose --preserve Release/Boot/autorunSD.bin Release/tempfiles/
 
 
 echo.
-echo [Step 3 of 5]: Generating file listing: Release/tempfiles.txt.
+echo [Step 3 of 5]: Generating file listing: Release/tempfiles.txt
 cd Release/tempfiles
 dir /b *.html *.png *.bin >../tempfiles.txt
 
@@ -52,6 +56,7 @@ echo [Step 4 of 5]: Building Release/Core/fsimage.bin
 echo.
 echo Included files:
 "../../Program/mkroffsimage" <../tempfiles.txt >../Core/fsimage.bin
+
 cd ../../
 
 

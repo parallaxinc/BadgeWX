@@ -1,9 +1,6 @@
 @echo off
 
 echo.
-echo ---This script built for Bash on Windows only---
-
-echo.
 cd ..
 if exist Source/Test/autorun.bin ( 
   echo Updating Release/Test
