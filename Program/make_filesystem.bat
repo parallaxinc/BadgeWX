@@ -15,15 +15,15 @@ echo.
 echo [Step 2 of 5]: Gather files into Release
 rem Update AutoRun files if necessary
 if exist Source/AutoRun/autorun/autorun.bin ( 
-  cp --verbose Source/AutoRun/autorun/autorun.bin Release/AutoRun/
+  cp --verbose --preserve Source/AutoRun/autorun/autorun.bin Release/AutoRun/
   rm Source/AutoRun/autorun/autorun.bin
 )
 if exist Source/AutoRun/autorunBL/cmm/autorunBL.bin ( 
-  cp --verbose Source/AutoRun/autorunBL/cmm/autorunBL.bin Release/AutoRun/
+  cp --verbose --preserve Source/AutoRun/autorunBL/cmm/autorunBL.bin Release/AutoRun/
   rm Source/AutoRun/autorunBL/cmm/autorunBL.bin
 )
 if exist Source/AutoRun/autorunSD/autorunSD.bin ( 
-  cp --verbose Source/AutoRun/autorunSD/autorunSD.bin Release/AutoRun/
+  cp --verbose --preserve Source/AutoRun/autorunSD/autorunSD.bin Release/AutoRun/
   rm Source/AutoRun/autorunSD/autorunSD.bin
 )
 rem Copy files to temporary space
@@ -31,14 +31,14 @@ if not exist Release/tempfiles (
   mkdir "Release/tempfiles/"
 )  
 if exist Source/Examples/*.html (
-  cp --verbose Source/Examples/*.html Release/tempfiles/
+  cp --verbose --preserve Source/Examples/*.html Release/tempfiles/
 ) 
 if exist Source/Examples/*.png ( 
-  cp --verbose Source/Examples/*.png Release/tempfiles/
+  cp --verbose --preserve Source/Examples/*.png Release/tempfiles/
 )  
-cp --verbose Release/AutoRun/autorun.bin Release/tempfiles/
-cp --verbose Release/AutoRun/autorunBL.bin Release/tempfiles/
-cp --verbose Release/AutoRun/autorunSD.bin Release/tempfiles/
+cp --verbose --preserve Release/AutoRun/autorun.bin Release/tempfiles/
+cp --verbose --preserve Release/AutoRun/autorunBL.bin Release/tempfiles/
+cp --verbose --preserve Release/AutoRun/autorunSD.bin Release/tempfiles/
 
 
 echo.
