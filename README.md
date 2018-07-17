@@ -20,7 +20,11 @@ Binary assets are included and managed by Git LFS.  See "_Binary_Assets_Are_GitL
 ## Building ESP Release
 The ESP Release image consists of ESP firmware plus user filesystem.
   - Build ESP Firmware
-    - <tbd>
+    - "Make" the firmware from the [Parallax-ESP repository](https://github.com/parallaxinc/Parallax-ESP)
+    - Copy the following files from that build to the Release/ESP subfolder of this repository
+      - httpd.ota
+      - httpd.user1.bin
+      - httpd.user2.bin
   - Build User Filesystem
     - (currently requires a Windows computer and Git Bash)
     - In a Git Bash command line window, navigate to the Program subfolder
