@@ -8,8 +8,11 @@
 #
 # GitLFS-managed large files (see https://git-lfs.github.com)
 Program/*.exe filter=lfs diff=lfs merge=lfs -text
-Release/ATTiny/*.hex filter=lfs diff=lfs merge=lfs -text
-Release/AutoRun/*.bin filter=lfs diff=lfs merge=lfs -text
-Release/ESP/*.bin filter=lfs diff=lfs merge=lfs -text
-Release/ESP/*.ota filter=lfs diff=lfs merge=lfs -text
-Release/Test/autorun.bin filter=lfs diff=lfs merge=lfs -text
+Release/Boot/*.bin filter=lfs diff=lfs merge=lfs -text
+Release/Core/*.bin filter=lfs diff=lfs merge=lfs -text
+Release/Core/*.ota filter=lfs diff=lfs merge=lfs -text
+Release/Power/*.hex filter=lfs diff=lfs merge=lfs -text
+Release/Test/*.bin filter=lfs diff=lfs merge=lfs -text
+Source/Examples/*.gif filter=lfs diff=lfs merge=lfs -text
+Source/Examples/*.png filter=lfs diff=lfs merge=lfs -text
+Source/Examples/*.jpg filter=lfs diff=lfs merge=lfs -text

@@ -11,3 +11,4 @@ IMPORTANT:
 FILES:
   autorun.bin - The autorun test code.  Upon boot-up, the BadgeWX automatically loads this file from the SD card and runs it on the Propeller.
   wifi.txt    - This contains the Wi-Fi credentials for use during BadgeWX testing.  Upon boot-up, the BadgeWX automatically loads this file and configures it's Wi-Fi Module accordingly.
+                NOTE: The Wi-Fi credentials are for a non-connected test AP only.

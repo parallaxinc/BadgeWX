@@ -1,17 +1,25 @@
 # Files with these extensions (and sometimes folders) are intentionally ignored so as not to accidentally include auto-generated content in this repository.
 
-#PowerButton auto-generated files
-Source/PowerButton/.vs/
-Source/PowerButton/BadgeWX_PowerT10/Debug/
-Source/PowerButton/BadgeWX_PowerT10/Release/
-*.componentinfo.xml
+#Boot auto-generated or leftover binary files
+Source/Boot/autorun/*.bin
+Source/Boot/autorun/*.binary
+Source/Boot/autorunBL/cmm/
+Source/Boot/autorunSD/*.bin
+Source/Boot/autorunSD/*.binary
 
-#autorunBL auto-generated files
-Source/AutoRun/autorunBL/cmm/
+#Soft power button auto-generated files
+Source/Power/.vs/
+Source/Power/BadgeWX_PowerT10/Debug/
+Source/Power/BadgeWX_PowerT10/Release/
+Source/Power/BadgeWX_PowerT10/*.componentinfo.xml
 
-#ESP auto-generated files
-Release/ESP/*.a
-Release/ESP/*.out
+#Test leftover binary files
+Source/Test/*.bin
+Source/Test/*.binary
+
+#Core auto-generated files
+Release/Core/*.a
+Release/Core/*.out
 
 #Ultra Edit
 *.bak

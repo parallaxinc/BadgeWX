@@ -1,4 +1,4 @@
-These are the binary images for the BadgeWX's ESP8266 module firmware and well as the initial User Filesystem.
+These are the core binary images for the BadgeWX's ESP8266 module firmware and well as the initial User Filesystem.
 
 
 IMPORTANT:

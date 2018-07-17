@@ -13,18 +13,18 @@ if exist "Release/tempfiles/*.*" (
 
 echo.
 echo [Step 2 of 5]: Gather files into Release
-rem Update AutoRun files if necessary
-if exist Source/AutoRun/autorun/autorun.bin ( 
-  cp --verbose --preserve Source/AutoRun/autorun/autorun.bin Release/AutoRun/
-  rm Source/AutoRun/autorun/autorun.bin
+rem Update Boot files if necessary
+if exist Source/Boot/autorun/autorun.bin ( 
+  cp --verbose --preserve Source/Boot/autorun/autorun.bin Release/Boot/
+  rm Source/Boot/autorun/autorun.bin
 )
-if exist Source/AutoRun/autorunBL/cmm/autorunBL.bin ( 
-  cp --verbose --preserve Source/AutoRun/autorunBL/cmm/autorunBL.bin Release/AutoRun/
-  rm Source/AutoRun/autorunBL/cmm/autorunBL.bin
+if exist Source/Boot/autorunBL/cmm/autorunBL.bin ( 
+  cp --verbose --preserve Source/Boot/autorunBL/cmm/autorunBL.bin Release/Boot/
+  rm Source/Boot/autorunBL/cmm/autorunBL.bin
 )
-if exist Source/AutoRun/autorunSD/autorunSD.bin ( 
-  cp --verbose --preserve Source/AutoRun/autorunSD/autorunSD.bin Release/AutoRun/
-  rm Source/AutoRun/autorunSD/autorunSD.bin
+if exist Source/Boot/autorunSD/autorunSD.bin ( 
+  cp --verbose --preserve Source/Boot/autorunSD/autorunSD.bin Release/Boot/
+  rm Source/Boot/autorunSD/autorunSD.bin
 )
 rem Copy files to temporary space
 if not exist Release/tempfiles (
@@ -36,9 +36,9 @@ if exist Source/Examples/*.html (
 if exist Source/Examples/*.png ( 
   cp --verbose --preserve Source/Examples/*.png Release/tempfiles/
 )  
-cp --verbose --preserve Release/AutoRun/autorun.bin Release/tempfiles/
-cp --verbose --preserve Release/AutoRun/autorunBL.bin Release/tempfiles/
-cp --verbose --preserve Release/AutoRun/autorunSD.bin Release/tempfiles/
+cp --verbose --preserve Release/Boot/autorun.bin Release/tempfiles/
+cp --verbose --preserve Release/Boot/autorunBL.bin Release/tempfiles/
+cp --verbose --preserve Release/Boot/autorunSD.bin Release/tempfiles/
 
 
 echo.
@@ -48,10 +48,10 @@ dir /b *.html *.png *.bin >../tempfiles.txt
 
 
 echo.
-echo [Step 4 of 5]: Building Release/ESP/fsimage.bin
+echo [Step 4 of 5]: Building Release/Core/fsimage.bin
 echo.
 echo Included files:
-"../../Program/mkroffsimage" <../tempfiles.txt >../ESP/fsimage.bin
+"../../Program/mkroffsimage" <../tempfiles.txt >../Core/fsimage.bin
 cd ../../
 
 
