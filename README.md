@@ -62,11 +62,11 @@ In a Git Bash command line window on a Windows computer, navigate to this reposi
 
 #### Full Release (recommended for most cases; Core being the exception)
 After building any one or more of the above components...
-  - Run the release script:  $ ./release.bat
+  - Run the release script:  ```$ ./release.bat```
     - This updates the Release/Boot, Core, Power, and Test folders (as necessary) with .hex and .bin files from Source and builds the Release/Core/fsimage.bin file (the user filesystem image)
 
 #### Boot Firmware Only
-  - Optionally, you may run only the release_filesystem script:  $ ./release_filesystem.bat
+  - Optionally, you may run only the release_filesystem script:  ```$ ./release_filesystem.bat```
       - This updates the Release/Boot folder (if necessary) with .bin files from Source/Boot... subfolders and builds the Release/Core/fsimage.bin file (the user filesystem image)
 
 #### Core Firmware
@@ -77,11 +77,11 @@ After building any one or more of the above components...
     - httpd.user2.bin
 
 #### Power Firmware Only
-    - Optionally, you may run only the release_power script:  $ ./release_power.bat
+    - Optionally, you may run only the release_power script:  ```$ ./release_power.bat```
       - This updates the Release/Power folder (if necessary) with the .hex file
 
 #### Test Firmware Only
-    - Optionally, you may run only the release_test script:  $ ./release_test.bat
+    - Optionally, you may run only the release_test script:  ```$ ./release_test.bat```
       - This updates the Release/Test folder (if necessary) with the autorun.bin file
    
 ### Program
@@ -110,8 +110,8 @@ manual programming must be done, here are some tips.
   3) Ground the PGM pin
   4) Power on the board/jig
   5) Perform the Erase procedure (replacing <com_port> with appropriate port name)
-     $ python -m esptool --baud 921600 --port <com_port> --before no_reset --after no_reset erase_flash
-     
+     ```$ python -m esptool --baud 921600 --port <com_port> --before no_reset --after no_reset erase_flash```
+```     
      EXAMPLE OUTPUT:
        esptool.py v2.4.1
        Serial port com7
@@ -128,10 +128,10 @@ manual programming must be done, here are some tips.
        Erasing flash (this may take a while)...
        Chip erase completed successfully in 3.6s
        Staying in bootloader.
-             
+```             
   6) Perform the Programming procedure (replacing <com_port> with appropriate port name)
-     $ python -m esptool --baud 921600 --port <com_port> --before no_reset --after no_reset write_flash 0x00000 boot_v1.6.bin 0x01000 httpd.user1.bin 0x100000 fsimage.bin 0x3FC000 esp_init_data_default.bin  
-       
+     ```$ python -m esptool --baud 921600 --port <com_port> --before no_reset --after no_reset write_flash 0x00000 boot_v1.6.bin 0x01000 httpd.user1.bin 0x100000 fsimage.bin 0x3FC000 esp_init_data_default.bin```  
+```       
      EXAMPLE OUTPUT:
        esptool.py v2.4.1
        Serial port com7
@@ -163,10 +163,10 @@ manual programming must be done, here are some tips.
        
        Leaving...
        Staying in bootloader.  
-     
+```     
   OLD PROGRAMMING METHOD)
      The following is the appropriate erase+program statement for the old esptool Windows executable (no longer used):
-     $ ./esptool -cd none -cb 921600 -cp <com_port> -bz 2M -bf 80 -bm qio -ca 0x00000 -cf boot_v1.6.bin -ca 0x01000 -cf httpd.user1.bin -ca 0x7e000 -cf blank.bin -ca 0x7f000 -cf blank.bin -ca 0x100000 -cf fsimage.bin -ca 0x1FA000 -cf blank.bin -ca 0x1FC000 -cf esp_init_data_default.bin -ca 0x1FE000 -cf blank.bin
+     ```$ ./esptool -cd none -cb 921600 -cp <com_port> -bz 2M -bf 80 -bm qio -ca 0x00000 -cf boot_v1.6.bin -ca 0x01000 -cf httpd.user1.bin -ca 0x7e000 -cf blank.bin -ca 0x7f000 -cf blank.bin -ca 0x100000 -cf fsimage.bin -ca 0x1FA000 -cf blank.bin -ca 0x1FC000 -cf esp_init_data_default.bin -ca 0x1FE000 -cf blank.bin```
    
    
    
