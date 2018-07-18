@@ -84,7 +84,7 @@ After building any one or more of the above components...
   - Optionally, you may run only the release_test script:  ```$ ./release_test.bat```
     - This updates the Release/Test folder (if necessary) with the autorun.bin file
    
-### Program
+## Program the BadgeWX
 For each badge, the Power button firmware needs to be programmed in first, followed by the Core firmware.  Normally, the test jig will be used to do this automatically; however, if
 manual programming must be done, here are some tips.
 
@@ -171,7 +171,7 @@ manual programming must be done, here are some tips.
   OLD PROGRAMMING METHOD)
      The following is the appropriate erase+program statement for the old esptool Windows executable (no longer used):
 ```
-     $ ./esptool -cd none -cb 921600 -cp <com_port> -bz 2M -bf 80 -bm qio -ca 0x00000 -cf boot_v1.6.bin -ca 0x01000 -cf httpd.user1.bin -ca 0x7e000 -cf blank.bin -ca 0x7f000 -cf blank.bin -ca 0x100000 -cf fsimage.bin -ca 0x1FA000 -cf blank.bin -ca 0x1FC000 -cf esp_init_data_default.bin -ca 0x1FE000 -cf blank.bin
+     $ ./esptool -cd none -cb 921600 -cp <com_port> -bz 4M -bf 80 -bm qio -ca 0x00000 -cf boot_v1.6.bin -ca 0x01000 -cf httpd.user1.bin -ca 0x7e000 -cf blank.bin -ca 0x7f000 -cf blank.bin -ca 0x100000 -cf fsimage.bin -ca 0x3FA000 -cf blank.bin -ca 0x3FC000 -cf esp_init_data_default.bin -ca 0x3FE000 -cf blank.bin
 ```
    
    
