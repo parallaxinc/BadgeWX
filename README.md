@@ -77,12 +77,12 @@ After building any one or more of the above components...
     - httpd.user2.bin
 
 #### Power Firmware Only
-    - Optionally, you may run only the release_power script:  ```$ ./release_power.bat```
-      - This updates the Release/Power folder (if necessary) with the .hex file
+  - Optionally, you may run only the release_power script:  ```$ ./release_power.bat```
+    - This updates the Release/Power folder (if necessary) with the .hex file
 
 #### Test Firmware Only
-    - Optionally, you may run only the release_test script:  ```$ ./release_test.bat```
-      - This updates the Release/Test folder (if necessary) with the autorun.bin file
+  - Optionally, you may run only the release_test script:  ```$ ./release_test.bat```
+    - This updates the Release/Test folder (if necessary) with the autorun.bin file
    
 ### Program
 For each badge, the Power button firmware needs to be programmed in first, followed by the Core firmware.  Normally, the test jig will be used to do this automatically; however, if
@@ -110,7 +110,9 @@ manual programming must be done, here are some tips.
   3) Ground the PGM pin
   4) Power on the board/jig
   5) Perform the Erase procedure (replacing <com_port> with appropriate port name)
-     ```$ python -m esptool --baud 921600 --port <com_port> --before no_reset --after no_reset erase_flash```
+```
+     $ python -m esptool --baud 921600 --port <com_port> --before no_reset --after no_reset erase_flash
+```
 ```     
      EXAMPLE OUTPUT:
        esptool.py v2.4.1
@@ -130,7 +132,9 @@ manual programming must be done, here are some tips.
        Staying in bootloader.
 ```             
   6) Perform the Programming procedure (replacing <com_port> with appropriate port name)
-     ```$ python -m esptool --baud 921600 --port <com_port> --before no_reset --after no_reset write_flash 0x00000 boot_v1.6.bin 0x01000 httpd.user1.bin 0x100000 fsimage.bin 0x3FC000 esp_init_data_default.bin```  
+```
+     $ python -m esptool --baud 921600 --port <com_port> --before no_reset --after no_reset write_flash 0x00000 boot_v1.6.bin 0x01000 httpd.user1.bin 0x100000 fsimage.bin 0x3FC000 esp_init_data_default.bin
+```  
 ```       
      EXAMPLE OUTPUT:
        esptool.py v2.4.1
@@ -166,7 +170,9 @@ manual programming must be done, here are some tips.
 ```     
   OLD PROGRAMMING METHOD)
      The following is the appropriate erase+program statement for the old esptool Windows executable (no longer used):
-     ```$ ./esptool -cd none -cb 921600 -cp <com_port> -bz 2M -bf 80 -bm qio -ca 0x00000 -cf boot_v1.6.bin -ca 0x01000 -cf httpd.user1.bin -ca 0x7e000 -cf blank.bin -ca 0x7f000 -cf blank.bin -ca 0x100000 -cf fsimage.bin -ca 0x1FA000 -cf blank.bin -ca 0x1FC000 -cf esp_init_data_default.bin -ca 0x1FE000 -cf blank.bin```
+```
+     $ ./esptool -cd none -cb 921600 -cp <com_port> -bz 2M -bf 80 -bm qio -ca 0x00000 -cf boot_v1.6.bin -ca 0x01000 -cf httpd.user1.bin -ca 0x7e000 -cf blank.bin -ca 0x7f000 -cf blank.bin -ca 0x100000 -cf fsimage.bin -ca 0x1FA000 -cf blank.bin -ca 0x1FC000 -cf esp_init_data_default.bin -ca 0x1FE000 -cf blank.bin
+```
    
    
    
