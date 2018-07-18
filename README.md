@@ -27,7 +27,7 @@ The following needs to be installed on the development computer before proceedin
   - Esptool - After Python install, open command prompt and enter: python -m pip install esptool
     - If needed, here are [more details](https://github.com/espressif/esptool) about Esptool for Python.
    
-## Building/Updating the Release
+## Build/Update the Release
 The Release consists of many Build/Release parts; perform any or all of the build steps and/or release steps (below) as necessary.
 
 ### Build
