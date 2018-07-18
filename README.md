@@ -40,10 +40,12 @@ The Release consists of many Build/Release parts; perform any or all of the buil
   - Follow Release instructions (below)
 
 #### Core Firmware   
-  - "Make" the Wi-Fi firmware from the [Parallax-ESP repository](https://github.com/parallaxinc/Parallax-ESP) repository
-    - $ cd <Parallax-ESP_folder>
-    - $ make clean
-    - $ make EXTRA_CFLAGS=-DWIFI_BADGE
+  - "Make" the Wi-Fi firmware from the [Parallax-ESP repository](https://github.com/parallaxinc/Parallax-ESP)
+```
+  $ cd <Parallax-ESP_folder>
+  $ make clean
+  $ make EXTRA_CFLAGS=-DWIFI_BADGE
+```
   - Follow Release instructions (below)
 
 #### Power (ATTiny) firmware
