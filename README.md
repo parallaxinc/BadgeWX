@@ -44,7 +44,7 @@ The Release consists of many Build/Release parts; perform any or all of the buil
 ```
   $ cd <Parallax-ESP_folder>
   $ make clean
-  $ make EXTRA_CFLAGS=-DWIFI_BADGE
+  $ make EXTRA_CFLAGS=-DAUTO_LOAD
 ```
   - Follow Release instructions (below)
 
