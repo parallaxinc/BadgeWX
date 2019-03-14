@@ -2,6 +2,8 @@
 #include "simpletools.h"
 #include "badgewxtools.h"
 #include "wifi.h"
+#include "ws2812.h"
+#include "oled_asmfast.c"
 
 
 
@@ -24,9 +26,11 @@
 
 #define BADGEWX_REVA_PINS // (Use this for RevA and RevB badges)
 
+// Note- most pin defines removed as now included in badgetools-wx
+
 #ifdef BADGEWX_REVA_PINS
 
-  #define RGB_PIN       10
+/*  #define RGB_PIN       10
   #define LED_PIN       9  // **** Changed since RevA1
   #define NAV_L         13 // **** Changed since RevA1
   #define NAV_C         12
@@ -53,8 +57,9 @@
   #define SD_MOSI       6
   #define SD_CLK        7
   #define SD_MISO       8  // **** Changed since RevA1
-  
+ */  
   #define WX_RES        16 // **** Changed since RevA2
+
   #define WX_BOOT       17 // **** Changed since RevA2
   
   #define USER_IO       27  
@@ -131,6 +136,12 @@
 #define EXITCODE_WAITFORCONNECTION 14
 #define EXITCODE_ADMIN 15
 #define EXITCODE_LOGOUT 16
+#define EXITCODE_DO_WIFIOFF 17
+#define EXITCODE_DO_WIFION 18
+
+//#define EXITCODE_SLEEPDEEP 19
+//#define EXITCODE_SLEEPLIGHT 20
+//#define EXITCODE_SLEEPWAKE 21
 
 
 #define SEARCH_ABORT 0
@@ -143,6 +154,8 @@
 #define WIFI_CONNECTED 2
 #define WIFI_NOTCONNECTED 3
 
+#define WIFI_POWER_OFF 0
+#define WIFI_POWER_ON 1
 
 
 #define LEFT 0
@@ -151,8 +164,20 @@
 
 
 
-#define STACK_GUI 144 // 128
-#define STACK_WIFI 256 // 200
+//#define STACK_GUI 144 // 144 // 128
+//#define STACK_WIFI 256 // 200
+//#define STACK_GUI_TIMER 48
+//#define STACK_SYS_TIMER 48
+
+
+//unsigned int STACK_GUI[144 + 25];
+//unsigned int STACK_WIFI[256 + 25];
+
+unsigned int STACK_GUI[200 + 25];
+unsigned int STACK_WIFI[320 + 25];
+unsigned int STACK_GUI_TIMER[40 + 25];
+unsigned int STACK_SYS_TIMER[40 + 25];
+
 
 // using 100, 136 has connect working, but oled is corrupted chars
 // using 104, 136 and the connect button crashes/hangs
@@ -179,16 +204,19 @@
 #define COG_STOP 1
 #define COG_STARTING 2
 #define COG_RUNNING 3
+#define COG_ELAPSED 4
+#define COG_BUSY 5
 
 
 void GetModuleName();
-void WiFiSearch();
+void WiFiSearch(void *par);
 void WiFiInit();
 
-void WiFiGetConnectedSSID();
-void GUI();
-void GUI_ABC();
-
+void WiFiGetConnectedSSID(void *par);
+void GUI(void *par);
+void GUI_ABC(void *par);
+void GUI_TIMER(void *par);
+void SYS_TIMER(void *par);
 
 _Bool WiFiWaitForMode(const int WiFiMode);
 
@@ -197,6 +225,10 @@ int menu_wifiConnect();
 int menu_wifiWaitForConnection();
 int menu_wifiManualSearch();
 int menu_wifiAdmin();
+int menu_wifiSleepDeep();
+
+int DO_WIFION();
+int DO_WIFIOFF();
 
 int AllowDownload();
 
@@ -213,7 +245,7 @@ char button(char b);
 
 // ------ Global Variables and Objects ------
 
-volatile char *ABC =  "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789\0"; // 37 chars + null
+char *ABC =  "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789\0"; // 37 chars + null
 
 
 #define ABC_upper "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789"
@@ -226,10 +258,24 @@ volatile char *ABC =  "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789\0"; // 37 chars + n
 #define menuIdxOtherMax 31;
 volatile int menuIdxMax = menuIdxABCMax;
 
-int *cogWiFi;
+/*int *cogWiFi;
 int *cogGUI;
+int *cogGUI_TIMER;
+int *cogSYS_TIMER;*/
+
+volatile int cogWiFi;
+volatile int cogGUI;
+volatile int cogGUI_TIMER;
+volatile int cogSYS_TIMER;
 
 volatile int cogState_GUI = COG_STOPPED;
+
+volatile int cogState_GUI_TIMER = COG_ELAPSED; 
+volatile int GUI_TIMER_MILLISECONDS = 1000;
+
+volatile int cogState_SYS_TIMER = COG_ELAPSED; 
+volatile int SYS_TIMER_MILLISECONDS = 1000; 
+
 
 volatile int wifiConnectionStatus = 0;
 volatile int wifiSearchStatus = 0;
@@ -301,7 +347,7 @@ volatile int updateGUI = 1;
 
 int dotidx = 3; // 12
 int dotdir = 1; // 0
-long t; // = CLKFREQ + CNT;  
+//long t; // = CLKFREQ + CNT;  
 int ssidIdx = 0;
 int ssidIdx_last = 1; // ensure display updated in first loop
 int force = 1;  
@@ -318,7 +364,7 @@ volatile int _lastMenuIdxRight; // = menuIdxRight;
    
 int lastRunIdx = -1;
     
-volatile long ggTimeout; // = CNT + 160000000; // 2 second ggTimeout
+//volatile long ggTimeout; // = CNT + 160000000; // 2 second ggTimeout
     
 #define cursorCharON 5
 #define cursorCharOFF ' '
@@ -343,10 +389,11 @@ int oneTimeUpdate = 1;
     
 volatile int lastOtherIdx = 0;
 volatile int lastABCIdx = 0;
- volatile int ABC_charset = 0;
+volatile int ABC_charset = 0;
+ 
+ 
+volatile int wifiPowerStatus = WIFI_POWER_ON;
   
-
-
 
 // OVERRIDE badge_setup
 
@@ -493,27 +540,30 @@ void centerToOLEDbuf(char *oled) {
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-_Bool isValidEEpromImage() {
+volatile _Bool isValidEEpromImage() {
     
    
      volatile int _eepromval = 0;
       
       
      eeBus = i2c_newbus(28,  29,   0); // Set up I2C bus, get bus ID
+      while(i2c_busy(eeBus, 0b1010000));
           
      
      // 1. Check word 3 - Start of Code pointer (must always be $0010)
      i2c_in(eeBus, 0b1010000, 6, 2, (char*) &_eepromval, 2);  // expect 0010, or decimal 16, for valid eeprom image
+     while(i2c_busy(eeBus, 0b1010000));
+     
      if (_eepromval != 0x0010) { return 0; }
      
       
      // 2. Get word 5 - Start of Stack Space pointer
      i2c_in(eeBus, 0b1010000, 10, 2, (char*) &_eepromval, 2);  // expect 1st free stack address AFTER stackpointer
-     
+     while(i2c_busy(eeBus, 0b1010000));
           
      // 3. Check word prior to Stack Space pointer address (deduct 2 from address)
      i2c_in(eeBus, 0b1010000, _eepromval-2, 2, (char*) &_eepromval, 2);  // expect FFF9, or decimal 65529, for valid eeprom image
-     
+     while(i2c_busy(eeBus, 0b1010000));
      
      return (_eepromval == 0xFFF9) ? 1:0;
   
@@ -527,6 +577,7 @@ void invalidateEEpromImage() {
     
    
      eeBus = i2c_newbus(28,  29,   0); // Set up I2C bus, get bus ID
+     while(i2c_busy(eeBus, 0b1010000));
           
      
      // 1. Check word 3 - Start of Code pointer (must always be $0010)
@@ -839,7 +890,42 @@ int main() {
   //cogLED = cog_run(bothLedsON, STACK_LED);
   
   badge_setup();
-     
+  
+  // Clear RGB LEDs
+  
+  //int ws_start(ws2812_t *driver, int usreset, int ns0h, int ns0l, int ns1h, int ns1l, int type);
+  
+  /*ws2812 *ws2812b;
+  int RGBleds[4];
+  
+  ws2812b = ws2812b_open();
+  for (int __ldx = 0; __ldx < 4; __ldx++) {
+    RGBleds[__ldx] = 0x000000;
+  }
+  ws2812_set(ws2812b, RGB_PIN, RGBleds, 4); */
+
+
+  // strip.startx(@pixels1, STRIP_LEN, STRIP_PIN, 1_0, true, 24, 250,700,600,500) ' Timing for RevA 1818, RevB 1823
+  // pub startx(p_buf, count, pin, holdoff, rgswap, bits, ns0h, ns0l, ns1h, ns1l)
+  
+  // default simplelib settings: return ws_start(state, 50, 350, 800, 700, 600, TYPE_GRB);
+  // int ws_start(ws2812_t *state, int usreset, int ns0h, int ns0l, int ns1h, int ns1l, int type)
+  
+  // Override startup routine!
+  /*ws2812b = ws2812b_open();
+  ws2812_stop(ws2812b);
+  ws2812b = (ws2812_t * ) malloc(sizeof(ws2812_t));
+  //ws_start(ws2812b, 300, 300, 900, 900, 350, TYPE_GRB);
+  ws_start(ws2812b, 300, 250,700,600,500, TYPE_GRB);
+  
+  
+  // Clear or set colors!
+  for (int __ldx = 1; __ldx <= 4; __ldx++) {
+    RGBleds[constrainInt(__ldx, 1, 4) - 1] = 0x000000;
+  }
+  ws2812_set(ws2812b, RGB_PIN, RGBleds, 4);*/
+
+  
   
   // NOTE: If this code always follows autorun.bin or autorunSD.bin, then no need to clear screen,
   //       nor to write HELLO!, as that will already be on the screen.
@@ -880,9 +966,23 @@ int main() {
   // ---
   
   
+  //cogGUI_TIMER = cog_run(GUI_TIMER, STACK_GUI_TIMER);
+  //cogSYS_TIMER = cog_run(SYS_TIMER, STACK_SYS_TIMER);
+  
+  cogGUI_TIMER = cogstart(GUI_TIMER, NULL, STACK_GUI_TIMER, sizeof(STACK_GUI_TIMER));
+  cogSYS_TIMER = cogstart(SYS_TIMER, NULL, STACK_SYS_TIMER, sizeof(STACK_SYS_TIMER));
+  
+  
+  // ---
+  
+  
   // Is there a current valid image in EEprom (if something Runnable, then include Run menu option!)
   validEEpromImage = isValidEEpromImage() ? 1:0;
   
+  // if EEprom image check failed, try 3 times more
+  if (validEEpromImage == 0) { validEEpromImage = isValidEEpromImage() ? 1:0; }
+  if (validEEpromImage == 0) { validEEpromImage = isValidEEpromImage() ? 1:0; }
+  if (validEEpromImage == 0) { validEEpromImage = isValidEEpromImage() ? 1:0; }
   
   // ---
   
@@ -902,8 +1002,9 @@ int main() {
 				
 					case EXITCODE_RESTART: // Full re-start- call after attempting to Join new network
 					
-						 cogWiFi = cog_run(WiFiGetConnectedSSID, STACK_WIFI);
-						 
+						 //cogWiFi = cog_run(WiFiGetConnectedSSID, STACK_WIFI);
+			         cogWiFi = cogstart(WiFiGetConnectedSSID, NULL, STACK_WIFI, sizeof(STACK_WIFI));			 
+       
 						 // Fall through to EXITCODE_WAITFORCONNECTION 
 				
     
@@ -975,6 +1076,36 @@ int main() {
 					
 						 result = menu_wifiGetPassword(); // blocking
 						 break;
+       
+      
+                /*case EXITCODE_SLEEPDEEP:
+					
+						 result = menu_wifiSleepDeep(); // blocking
+						 break;*/
+       
+       
+       
+            case EXITCODE_DO_WIFIOFF:
+             
+                result = DO_WIFIOFF(); // blocking
+						 break;
+       
+       
+            case EXITCODE_DO_WIFION:
+             
+                result = DO_WIFION(); // blocking
+						 break;
+       
+        /*
+            case EXITCODE_SLEEPLIGHT:
+					
+						 result = menu_wifiSleepLight(); // blocking
+						 break;
+       
+            case EXITCODE_SLEEPWAKE:
+					
+						 result = menu_wifiSleepWake(); // blocking
+						 break;*/
 													
 				} // switch (result) 
           
@@ -1057,6 +1188,9 @@ void WiFiInit() {
     // NOTE: Takes about 3ms when WiFi module active, or ggTimeout after 3 secs if WiFi module disabled or missing/faulty (reset shunted to gnd perhaps?)
 	
     memset(_moduleName, '\0', sizeof(_moduleName));  // Clear to null
+    
+    //wifi_print(CMD, NULL, "%cSLEEP:1\r", CMD);
+    
         
     int tries = 3;
     while (--tries >= 0) {
@@ -1148,7 +1282,7 @@ void WiFiInit() {
 
 
 // Loop waiting for connected SSID and IP
-void WiFiGetConnectedSSID() {
+void WiFiGetConnectedSSID(void *par) {
   
   
     
@@ -1210,8 +1344,8 @@ void WiFiGetConnectedSSID() {
   
     if (wifiConnectionStatus != WIFI_CONNECTED) { wifiConnectionStatus = WIFI_NOTCONNECTED; } // Override status if nothing was found
       
-    cog_end(cogWiFi);    
-      
+    //cog_end(cogWiFi);    
+    cogstop(cogWiFi);  
 
 }
 
@@ -1233,7 +1367,9 @@ void StringToOLED(int row, int col, char * textPtr) {
 int menu_wifiWaitForConnection() {
   
   
-  cogGUI = cog_run(GUI, STACK_GUI);
+  //cogGUI = cog_run(GUI, STACK_GUI);
+  cogGUI = cogstart(GUI, NULL, STACK_GUI, sizeof(STACK_GUI));
+  
   while (cogState_GUI != COG_RUNNING) { }
   
   
@@ -1263,7 +1399,10 @@ int menu_wifiWaitForConnection() {
   
   dotidx = 3; // 12
   dotdir = 1; // 0
-  t = CLKFREQ + CNT;   
+  //t = CLKFREQ + CNT;   
+  
+  SYS_TIMER_MILLISECONDS = 1000;
+  cogState_SYS_TIMER = COG_RUNNING;
   
   // ---
   
@@ -1275,8 +1414,8 @@ int menu_wifiWaitForConnection() {
     // Countdown timer display
     // Remove a dot from the display once every 1 second-ish
     
-    if (t < CNT) { // 1 second elapsed
-      
+    //if (t < CNT) { // 1 second elapsed
+    if (cogState_SYS_TIMER == COG_ELAPSED) {  
       
       if (dotdir == 0) { 
          
@@ -1285,7 +1424,9 @@ int menu_wifiWaitForConnection() {
               OLED[5][dotidx] = '.';
               --dotidx;
               updateGUI = 1;
-              t = CLKFREQ + CNT;
+              //t = CLKFREQ + CNT;
+             SYS_TIMER_MILLISECONDS = 1000;
+             cogState_SYS_TIMER = COG_RUNNING;
           
           } else {
             
@@ -1302,7 +1443,9 @@ int menu_wifiWaitForConnection() {
               OLED[5][dotidx] = '*';
               ++dotidx;
               updateGUI = 1;
-              t = CLKFREQ + CNT;
+              //t = CLKFREQ + CNT;
+              SYS_TIMER_MILLISECONDS = 1000;
+              cogState_SYS_TIMER = COG_RUNNING;
           
           } else {
               
@@ -1316,6 +1459,7 @@ int menu_wifiWaitForConnection() {
     } // if (t < CNT)
     
     
+    //t = t + CLKFREQ;
   
     // ---
   
@@ -1381,12 +1525,13 @@ int menu_wifiWaitForConnection() {
 
 int menu_wifiStatus() {
   
-  //static int autoRunLocked = 0;
+  //static int cidx = 0;
   
-  cogGUI = cog_run(GUI, STACK_GUI);
+  
+  cogGUI = cogstart(GUI, NULL, STACK_GUI, sizeof(STACK_GUI));
   while (cogState_GUI != COG_RUNNING) { }
+  
    
- 
   strcpy(OLED[0], "              <>");
   
   
@@ -1424,7 +1569,14 @@ int menu_wifiStatus() {
             strcpy(OLED[5], "Try SEARCH menu!");
                              
   
-  }            
+  }         
+  
+  
+  // override for wifi module off state
+  if (wifiPowerStatus == WIFI_POWER_OFF) {
+      strcpy(OLED[3], " WiFi Power Off "); 
+      strcpy(OLED[5], "                "); 
+  }       
   
  
  
@@ -1454,12 +1606,27 @@ int menu_wifiStatus() {
       strcpy(menuRight[menuRight_elements++], "LOAD");
       strcpy(menuRight[menuRight_elements++], "SEARCH");
       strcpy(menuRight[menuRight_elements++], "ADMIN");
-          
+                      
   } else {
   
-      strcpy(menuRight[menuRight_elements++], "SEARCH");
+      if (wifiPowerStatus == WIFI_POWER_ON) { strcpy(menuRight[menuRight_elements++], "SEARCH"); }
+      strcpy(menuRight[menuRight_elements++], "ADMIN");
       
-  }    
+  }  
+  
+  
+  
+  if (wifiPowerStatus == WIFI_POWER_ON) {
+  
+    strcpy(menuRight[menuRight_elements++], "WIFI-OFF"); 
+    
+        
+  } else {
+    
+    strcpy(menuRight[menuRight_elements++], "WIFI-ON"); 
+    
+    
+  }         
         
   
   
@@ -1471,7 +1638,6 @@ int menu_wifiStatus() {
       disableAutoRun = 1; // Only allow autorun once; the first time user sees this menu
   
   }  */
- 
  
  
   while(1) {
@@ -1490,7 +1656,52 @@ int menu_wifiStatus() {
             if (startsWith("L", menuRight[menuIdxRight])) { return EXITCODE_LOAD; }
             if (startsWith("S", menuRight[menuIdxRight])) { return EXITCODE_SEARCH; } 
             //if (startsWith("F", menuRight[menuIdxRight])) { return EXITCODE_FORGET; }
-            if (startsWith("A", menuRight[menuIdxRight])) { return EXITCODE_ADMIN; }                          
+            if (startsWith("A", menuRight[menuIdxRight])) { return EXITCODE_ADMIN; } 
+            
+            
+            if (startsWith("W", menuRight[menuIdxRight])) { 
+            
+            
+                    clearMenus();
+                  
+                    strcpy(OLED[3], " Configuring... "); 
+                    strcpy(OLED[5], "                ");
+                  
+                    /*cidx = 58; // ascii 9  (+1)
+                    
+                    while(--cidx > 48) {
+                      OLED[5][8] = (cidx);
+                      updateGUI = 1;
+                    
+                      waitcnt(CNT + CLKFREQ); // wait 1 second
+                      
+                    }*/
+
+                   
+                    
+                    if (wifiPowerStatus == WIFI_POWER_ON) { 
+                    
+                        wifiPowerStatus = WIFI_POWER_OFF;
+                        
+                        return EXITCODE_DO_WIFIOFF;
+                    
+                    } else {
+                      
+                      
+                        wifiPowerStatus = WIFI_POWER_ON;
+                    
+                        return EXITCODE_DO_WIFION;
+                  
+                    }                  
+            
+            
+            } // W
+            
+            
+            
+            
+            
+              
      
      } // if (menuSelectedRight == 1)
        
@@ -1508,7 +1719,8 @@ int menu_wifiStatus() {
 int menu_wifiAdmin() {
   
   
-  cogGUI = cog_run(GUI, STACK_GUI);
+  //cogGUI = cog_run(GUI, STACK_GUI);
+  cogGUI = cogstart(GUI, NULL, STACK_GUI, sizeof(STACK_GUI));
   while (cogState_GUI != COG_RUNNING) { }
    
  
@@ -1669,33 +1881,71 @@ int menu_wifiAdmin() {
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
+
+int DO_WIFIOFF() {
+  
+    
+    wifi_start(31, 30, 115200, WX_ALL_COM);
+
+    wifi_print(CMD, NULL, "%cSLEEP:2,0\r", CMD); // Sleep without RFCAL set
+
+    wifi_stop();
+  
+
+    //wifiClearAllCredentials();
+    wifiConnectionStatus = NOT_CONNECTED;
+
+    // All done, return to WiFi logout menu
+    return EXITCODE_WIFISTATUS;
+  
+ 
+}
+
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+int DO_WIFION() {
+
+    
+      // Keep boot pin high to prevent autoload from wifi module
+      high(WX_BOOT);
+                                          
+                        
+      // Toggle reset pin, low then input
+      low(WX_RES);
+      waitcnt(CNT + CLKFREQ / 2000); // wait 1/2 millisecond
+      set_direction(WX_RES, 0); //  
+                        
+                    
+      // clear boot pin
+      waitcnt(CNT + CLKFREQ / 4); // wait 1/4 second, allow ESP to reboot (typically 180ms)
+      
+      
+      // Force sleep to return in default mode, waking by itself....
+      wifi_start(31, 30, 115200, WX_ALL_COM);
+      WiFiWaitForMode(STA+AP);
+      waitcnt(CNT + CLKFREQ / 2);
+      WiFiWaitForMode(STA);
+      wifi_print(CMD, NULL, "%cJOIN:\r", CMD); // Attempt to join last-known network, with credentials stored in ESP module
+      wifi_stop();
+      
+      
+      set_direction(WX_BOOT, 0); // Reset IO14 as input after reboot
+                    
+                        
+      wifiPowerStatus = WIFI_POWER_ON;          
+      
+                                                            
+      return EXITCODE_RESTART; // Will try connecting with last known credentials
+      
+
+}
+
+
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------------------------------------------------------------------------------------
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
@@ -1704,8 +1954,9 @@ int menu_wifiAdmin() {
 int AllowDownload() {
   
     
-	cogGUI = cog_run(GUI, STACK_GUI);
-    while (cogState_GUI != COG_RUNNING) { }
+	//cogGUI = cog_run(GUI, STACK_GUI);
+  cogGUI = cogstart(GUI, NULL, STACK_GUI, sizeof(STACK_GUI));
+  while (cogState_GUI != COG_RUNNING) { }
   
     
     strcpy(OLED[0], "WiFi Programming");
@@ -1781,10 +2032,11 @@ int menu_wifiManualSearch() {
     while ( wifiSearchStatus == SEARCH_ABORT ) { } // Wait until wifi connection cog actually exits (IMPORTANT!)  
   }*/ 
       
-  cogWiFi = cog_run(WiFiSearch, STACK_WIFI);
+  //cogWiFi = cog_run(WiFiSearch, STACK_WIFI);
+  cogWiFi = cogstart(WiFiSearch, NULL, STACK_WIFI, sizeof(STACK_WIFI));
   
-  
-  cogGUI = cog_run(GUI, STACK_GUI);
+  //cogGUI = cog_run(GUI, STACK_GUI);
+  cogGUI = cogstart(GUI, NULL, STACK_GUI, sizeof(STACK_GUI));
   while (cogState_GUI != COG_RUNNING) { }
   
   
@@ -1824,13 +2076,17 @@ int menu_wifiManualSearch() {
   
   dotidx = 2;
   dotdir = 1;
-  t = CLKFREQ + CNT;
+  //t = CLKFREQ + CNT;
+  
+  SYS_TIMER_MILLISECONDS = 1000;
+  cogState_SYS_TIMER = COG_RUNNING;
+
 
   while (wifiSearchStatus != SEARCH_COMPLETE) { // Wait for search to complete 
     
 		// TODO: Allow ABORT during this loop! Menu option!
 		
-		 if (t < CNT) { // 1 second elapsed
+		 if (cogState_SYS_TIMER == COG_ELAPSED) { // 1 second elapsed
 			
 			
 			if (dotdir == 0) { 
@@ -1840,8 +2096,10 @@ int menu_wifiManualSearch() {
 					OLED[5][dotidx] = '.';
 					--dotidx;
 					updateGUI = 1;
-					t = CLKFREQ + CNT;
-				
+					//t = CLKFREQ + CNT;
+	           SYS_TIMER_MILLISECONDS = 1000;
+              cogState_SYS_TIMER = COG_RUNNING;		
+   	
 				} else {
 				  
 					dotdir = 1; // Change direction
@@ -1857,7 +2115,9 @@ int menu_wifiManualSearch() {
 					OLED[5][dotidx] = '*';
 					++dotidx;
 					updateGUI = 1;
-					t = CLKFREQ + CNT;
+					//t = CLKFREQ + CNT;
+              SYS_TIMER_MILLISECONDS = 1000;
+              cogState_SYS_TIMER = COG_RUNNING;
 				
 				} else {
 					
@@ -2259,7 +2519,7 @@ int menu_wifiManualSearch() {
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-void WiFiSearch() {
+void WiFiSearch(void *par) {
   
   // TODO: scan/poll required after fire-and-forget instructions, like cmd-event/etc.. ?
   //        - would be nice to remove all that potentially cog-locking fluff.
@@ -2609,7 +2869,7 @@ void WiFiSearch() {
   //wifiScanDone = 1; // Calling cog will block until this flag set
   wifiSearchStatus = SEARCH_COMPLETE; 
  
-  cog_end(cogWiFi);
+  /*cog_end*/cogstop(cogWiFi);
  
 } 
 
@@ -2618,6 +2878,10 @@ void WiFiSearch() {
 
 
 
+
+
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 
@@ -2747,7 +3011,8 @@ int menu_wifiConnect() {
 int menu_wifiGetPassword() {
       
       
-      cogGUI = cog_run(GUI_ABC, STACK_GUI);
+      //cogGUI = cog_run(GUI_ABC, STACK_GUI);
+      cogGUI = cogstart(GUI_ABC, NULL, STACK_GUI, sizeof(STACK_GUI));
       
       memset(_apPASS, '\0', sizeof(_apPASS));  // Clear to null
       
@@ -3054,11 +3319,80 @@ void bothLedsON() {
 // -----------------------------------------------------------------------------------------------------------------------------------------------------------  
 
 
+void SYS_TIMER(void *par) {
+  
+  // Set SYS_TIMER_MILLISECONDS with countdown value.
+  // Then set cogState_SYS_TIMER = COG_RUNNING, to set things off or re-arm
+	
+	// Check for: cogState_SYS_TIMER == COG_ELAPSED   or   end the timer by setting SYS_TIMER_SECONDS = COG_ELAPSED
+  
+  int milliseconds = 0;
+  cogState_SYS_TIMER = COG_ELAPSED;
+  
+  while(1) {
+    
+    while(cogState_SYS_TIMER == COG_ELAPSED) { } // Wait till timer flag armed
+    
+    milliseconds = SYS_TIMER_MILLISECONDS + 1; // Grab HUB global value
+    
+    cogState_SYS_TIMER = COG_BUSY;
+    
+    while(cogState_SYS_TIMER == COG_BUSY && --milliseconds > 0) {  
+      waitcnt(CNT + CLKFREQ / 1000); // wait 1 millisecond  
+    }    
+    
+    // if running, re-arm with new timer value.
+    // if milliseconds = 0 then elapse
+    
+    if (milliseconds == 0) { cogState_SYS_TIMER = COG_ELAPSED; } 
+      
+  }        
+    
+} 
+
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------  
+
+
+void GUI_TIMER(void *par) {
+  
+  // Set GUI_TIMER_MILLISECONDS with countdown value.
+  // Then set cogState_GUI_TIMER = COG_RUNNING, to set things off or re-arm
+	
+	// Check for: cogState_GUI_TIMER == COG_ELAPSED   or   end the timer by setting GUI_TIMER_SECONDS = COG_ELAPSED
+  
+  int milliseconds = 0;
+  cogState_GUI_TIMER = COG_ELAPSED;
+  
+  while(1) {
+    
+    while(cogState_GUI_TIMER == COG_ELAPSED) { } // Wait till timer flag armed
+    
+    milliseconds = GUI_TIMER_MILLISECONDS + 1; // Grab HUB global value
+    
+    cogState_GUI_TIMER = COG_BUSY;
+    
+    while(cogState_GUI_TIMER == COG_BUSY && --milliseconds > 0) {  
+      waitcnt(CNT + CLKFREQ / 1000); // wait 1 millisecond  
+    }    
+    
+    // if running, re-arm with new timer value.
+    // if milliseconds = 0 then elapse
+    
+    if (milliseconds == 0) { cogState_GUI_TIMER = COG_ELAPSED; } 
+      
+  }        
+    
+}  
+ 
+
+
+// -----------------------------------------------------------------------------------------------------------------------------------------------------------  
 
 
 
 	  
-void GUI() {
+void GUI(void *par) {
   
 	 
     // Write to OLED, and handle button presses
@@ -3100,7 +3434,10 @@ void GUI() {
     lastRunIdx = -1;
     
     
-    ggTimeout = CNT + 160000000; // 2 second ggTimeout
+    //ggTimeout = CNT + 160000000; // 2 second ggTimeout
+    GUI_TIMER_MILLISECONDS = 2000;
+    cogState_GUI_TIMER = COG_RUNNING;
+    
     
     
     // Init complete, set status flag
@@ -3166,7 +3503,9 @@ void GUI() {
         if ((lastRunIdx == -1) && (runIdx > -1)) {
           
             // Start the countdown, reset timer!
-            ggTimeout = CNT + 160000000; // 2 second ggTimeout
+            //ggTimeout = 160000000 + CNT; // 2 second ggTimeout
+            GUI_TIMER_MILLISECONDS = 2000;
+            cogState_GUI_TIMER = COG_RUNNING;
           
         }
         
@@ -3187,7 +3526,7 @@ void GUI() {
                       //ggTimeout = CNT + 160000000; // 2 second ggTimeout
               }
               
-              else if ((menuIdxRight == 0) && (runIdx > 0) && (CNT > ggTimeout)) { // Time elapsed whilst on RUN menu, so countdown idx
+              else if ((menuIdxRight == 0) && (runIdx > 0) && (/*CNT > ggTimeout*/cogState_GUI_TIMER == COG_ELAPSED)) { // Time elapsed whilst on RUN menu, so countdown idx
                 
                       --runIdx;
                       menuRight[0][5] = 48 + runIdx; // Insert run digit; add 48 for ASCII conversion 
@@ -3208,8 +3547,9 @@ void GUI() {
                       
                       }  
                       
-                      ggTimeout = CNT + 80000000; // Reset to 1 second ggTimeout                        
-                
+                      //ggTimeout = 80000000 + CNT; // Reset to 1 second ggTimeout                        
+                      GUI_TIMER_MILLISECONDS = 1000;
+                      cogState_GUI_TIMER = COG_RUNNING;
               }
           
           } // if ( runIdx > -1 )                    
@@ -3361,7 +3701,7 @@ void GUI() {
 
 
   cogState_GUI = COG_STOPPED;
-  cog_end(cogGUI);
+  /*cog_end*/cogstop(cogGUI);
 
 
 } // GUI()
@@ -3379,7 +3719,7 @@ void GUI() {
 
 
 // 2nd version of GUI, which handles password entry
-void GUI_ABC() {
+void GUI_ABC(void *par) {
   
     
     cogState_GUI = COG_STARTING;
@@ -3428,8 +3768,9 @@ void GUI_ABC() {
     cursorIdx = 0;        
         
     //long ggTimeout = CNT + 160000000; // 2 second ggTimeout
-    ggTimeout = CNT + 80000000;
-    
+    //ggTimeout = CNT + 80000000;
+    GUI_TIMER_MILLISECONDS = 1000;
+    cogState_GUI_TIMER = COG_RUNNING;
     
     
 
@@ -3457,7 +3798,7 @@ void GUI_ABC() {
         
         // Handle cursor blinking effect      
         
-        if ( (CNT > ggTimeout) ) {
+        if ( cogState_GUI_TIMER == COG_ELAPSED /*(CNT > ggTimeout)*/ ) {
           
          
               cursorCharLast = (cursorCharLast == cursorCharON) ? cursorCharOFF : cursorCharON;                                          
@@ -3465,7 +3806,9 @@ void GUI_ABC() {
               cursor(cursorIdx, cursorRow); // Blink cursor on row under the current ABC row
               oledprint("%c", cursorCharLast);
               
-              ggTimeout = CNT + 40000000; // Reset ggTimeout
+              //ggTimeout = CNT + 40000000; // Reset ggTimeout
+              GUI_TIMER_MILLISECONDS = 500;
+              cogState_GUI_TIMER = COG_RUNNING;
                  
         }          
         
@@ -3677,8 +4020,8 @@ void GUI_ABC() {
                   cursor(cursorIdx, cursorRow);
                   oledprint("%c", cursorCharOFF);
                   cursorCharLast = cursorCharOFF;
-                  ggTimeout = CNT -1; // force immediate redraw
-                                
+                  //ggTimeout = CNT -1; // force immediate redraw
+                  cogState_GUI_TIMER = COG_ELAPSED;              
                   
                   
                   
@@ -3754,7 +4097,9 @@ void GUI_ABC() {
                   cursor(cursorIdx, cursorRow);
                   oledprint("%c", cursorCharOFF);
                   cursorCharLast = cursorCharOFF;
-                  ggTimeout = CNT -1; // force immediate redraw
+                  //ggTimeout = CNT -1; // force immediate redraw
+                  cogState_GUI_TIMER = COG_ELAPSED;
+                  
                   
                   // Update idx's
                   cursorIdx = (passwordIdx > 15) ? (passwordIdx - 16) : passwordIdx;
@@ -3821,7 +4166,7 @@ void GUI_ABC() {
     
     
     cogState_GUI = COG_STOPPED;
-    cog_end(cogGUI);
+    /*cog_end*/cogstop(cogGUI);
 
 
 } // void
