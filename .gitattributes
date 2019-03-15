@@ -1,5 +1,8 @@
 # If ANY .spin files become UTF-16 encoded, uncomment next line and update "<filename>" to set Git to handle that .spin file properly; REQUIRES Git v2.18.0 (6/22/18) or later
 # <filename>.spin text working-tree-encoding=UTF-16
+
+*.spin diff=localizablestrings
+
 #
 #
 # Do not convert ANY text file line endings (ie: leave all files as-is on commit/checkout)
