@@ -1,7 +1,5 @@
 # If ANY .spin files become UTF-16 encoded, uncomment next line and update "<filename>" to set Git to handle that .spin file properly; REQUIRES Git v2.18.0 (6/22/18) or later
-Source/Boot/autorun/sj_oled_badgewx_minimal.spin text working-tree-encoding=UTF-16
-
-#*.spin diff=localizablestrings
+#<filename>.spin text working-tree-encoding=UTF-16
 
 #
 #
