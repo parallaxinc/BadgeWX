@@ -1,5 +1,5 @@
 ''********************************************
-''      
+'' *** ***
 '' WARNING!
 ''
 '' This version has been stripped down to
