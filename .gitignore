@@ -23,3 +23,8 @@ Release/Core/*.out
 
 #Ultra Edit
 *.bak
+
+#Temporary libwifi exclusions
+Source/Boot/autorunBL/libwifi/cmm/
+Source/Boot/autorunBL/libwifi/*.binary
+Source/Boot/autorunBL/libwifi/*.elf
