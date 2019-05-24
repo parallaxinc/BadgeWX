@@ -2,8 +2,13 @@
 #include "simpletools.h"
 #include "badgewxtools.h"
 #include "wifi.h"
-#include "ws2812.h"
 #include "oled_asmfast.c"
+//#include "ws2812.h"
+
+
+
+#define BL_VerString "FwVer1.3\0" // Bump each new public release. DO NOT EXCEED 8 CHARS!!!
+
 
 
 
@@ -164,40 +169,10 @@
 
 
 
-//#define STACK_GUI 144 // 144 // 128
-//#define STACK_WIFI 256 // 200
-//#define STACK_GUI_TIMER 48
-//#define STACK_SYS_TIMER 48
-
-
-//unsigned int STACK_GUI[144 + 25];
-//unsigned int STACK_WIFI[256 + 25];
-
-unsigned int STACK_GUI[200 + 25];
-unsigned int STACK_WIFI[320 + 25];
-unsigned int STACK_GUI_TIMER[40 + 25];
-unsigned int STACK_SYS_TIMER[40 + 25];
-
-
-// using 100, 136 has connect working, but oled is corrupted chars
-// using 104, 136 and the connect button crashes/hangs
-// using 100, 136 again, and it has oled is corrupted chars again
-
-// using 92, 136 and... connect hangs, but gets a bit further than 104 (which hung immediaetly). So the AP mode swap happends.
-
-// 100,144 - ok hang (nullchar tx only)
-// 100,128 - ok hang (nullchar tx only)
-
-// In theory we can now add 23 more bytes to each stack
-// 120, 156 does AP mode swap, then hangs
-
-// TODO:
-// 128, 200 currently OK!!!  -- MUST do some testing though- what's the real limit ?!?!
-
-
-
-
-
+unsigned int STACK_GUI[40 + 180];
+unsigned int STACK_WIFI[40 + 200];
+unsigned int STACK_GUI_TIMER[40 + 20];
+unsigned int STACK_SYS_TIMER[40 + 20];
 
 
 #define COG_STOPPED 0
@@ -237,7 +212,7 @@ void doRUN();
 
 int menu_wifiStatus();
 
-i2c *eeBus;                                   // I2C bus ID
+i2c *eeBus; // I2C bus ID
 
 unsigned char buttons();
 char button(char b);
@@ -257,11 +232,6 @@ char *ABC =  "ABCDEFGHIJKLMNOPQRSTUVWXYZ 0123456789\0"; // 37 chars + null
 #define menuIdxABCMax 36; // strlen(ABC) - 1;
 #define menuIdxOtherMax 31;
 volatile int menuIdxMax = menuIdxABCMax;
-
-/*int *cogWiFi;
-int *cogGUI;
-int *cogGUI_TIMER;
-int *cogSYS_TIMER;*/
 
 volatile int cogWiFi;
 volatile int cogGUI;
@@ -324,6 +294,8 @@ char menuLeft[10][9]; // max 8 chars
 char menuRight[10][9]; // max 8 chars 
 
 const char encName[6][5] = {"OPEN\0"," WEP\0"," WPA\0","WPA2\0","WPA+\0"," MAX\0"};
+
+//const char GC_CANCEL[7] = "CANCEL\0";
 
 volatile int runIdx = 5;
 
@@ -638,14 +610,13 @@ void clearOLED() {
   
   
   int idx = 8; // 8 rows
-  while (--idx >= 0) {
+  while (idx-- > 0) {
     
     strncpy(OLED[idx], "                ", 17); // Copy 16 spaces and 1 null byte
   
   }  
   
-  
-  
+    
 }
 
 
@@ -698,17 +669,19 @@ void updateOLED_row(int rowIdx) {
 
 void updateOLED() {
 	
-	  // Call only from the GUI cog!
+  // Call only from the GUI cog!
 	
-	  int rowIdx = 7; // Don't update row 8 (idx 7), as menuUpdate will do that
-	  while (--rowIdx >= 0) {
-	
-		    //cursor(0, rowIdx);
-		    //oledprint("%s", OLED[rowIdx]);
+  int rowIdx = 7; // Don't update row 8 (idx 7), as menuUpdate will do that
+	  
+  //while (--rowIdx >= 0) {
+  while (rowIdx-- > 0) {
+ 
+      //cursor(0, rowIdx);
+      //oledprint("%s", OLED[rowIdx]);
   
-         updateOLED_row(rowIdx);
+      updateOLED_row(rowIdx);
 	
-	  }
+  }
 	
 }
 
@@ -893,9 +866,9 @@ int main() {
   
   // Clear RGB LEDs
   
-  //int ws_start(ws2812_t *driver, int usreset, int ns0h, int ns0l, int ns1h, int ns1l, int type);
+  /*int ws_start(ws2812_t *driver, int usreset, int ns0h, int ns0l, int ns1h, int ns1l, int type);
   
-  /*ws2812 *ws2812b;
+  ws2812 *ws2812b;
   int RGBleds[4];
   
   ws2812b = ws2812b_open();
@@ -966,8 +939,6 @@ int main() {
   // ---
   
   
-  //cogGUI_TIMER = cog_run(GUI_TIMER, STACK_GUI_TIMER);
-  //cogSYS_TIMER = cog_run(SYS_TIMER, STACK_SYS_TIMER);
   
   cogGUI_TIMER = cogstart(GUI_TIMER, NULL, STACK_GUI_TIMER, sizeof(STACK_GUI_TIMER));
   cogSYS_TIMER = cogstart(SYS_TIMER, NULL, STACK_SYS_TIMER, sizeof(STACK_SYS_TIMER));
@@ -1373,7 +1344,7 @@ int menu_wifiWaitForConnection() {
   while (cogState_GUI != COG_RUNNING) { }
   
   
-  strcpy(OLED[0], "              <>"); 
+   
   strcpy(OLED[1], "    Badge-WX    ");
   strcpy(OLED[3], "   Connecting   ");
   strcpy(OLED[5], "   ..........   ");
@@ -1384,11 +1355,13 @@ int menu_wifiWaitForConnection() {
   if (validEEpromImage == 1) {
     
     strcpy(menuRight[menuRight_elements++], "RUN");
+    strcpy(OLED[0], "              <>");
   
   }
   
   strcpy(menuRight[menuRight_elements++], "CANCEL");    
-    
+  //strcpy(menuRight[menuRight_elements++], GC_CANCEL); 
+  
   
   updateGUI = 1;
   
@@ -1525,14 +1498,14 @@ int menu_wifiWaitForConnection() {
 
 int menu_wifiStatus() {
   
-  //static int cidx = 0;
+  //int fwvisible = 0;
   
   
   cogGUI = cogstart(GUI, NULL, STACK_GUI, sizeof(STACK_GUI));
   while (cogState_GUI != COG_RUNNING) { }
   
    
-  strcpy(OLED[0], "              <>");
+  //strcpy(OLED[0], "              <>");
   
   
   if (wifiConnectionStatus == WIFI_CONNECTED) {
@@ -1628,7 +1601,10 @@ int menu_wifiStatus() {
     
   }         
         
-  
+  if (menuRight_elements > 1) {
+    strcpy(OLED[0], "              <>"); 
+    //strncpy(OLED[0], "              <>", 16); 
+  }    
   
   
   updateGUI = 1;
@@ -1704,6 +1680,46 @@ int menu_wifiStatus() {
               
      
      } // if (menuSelectedRight == 1)
+     
+     
+     
+     /*if (menuSelectedLeft == 1) {
+      
+        // Secret menu.... Show firmware version top left
+        menuSelectedLeft = 0;
+      
+        if (fwvisible==0) {
+          strcpy(OLED[0], "FW=1.3        <>");
+          fwvisible=1;
+        } else {
+        
+          strcpy(OLED[0], "              <>");
+          fwvisible=0; 
+        }
+                    
+        updateGUI = 1; 
+       
+     } */  
+
+    if (menuSelectedLeft == 1) {
+
+      menuSelectedLeft = 0;
+      
+      if (menuLeft_elements == 0) {
+      
+        strcpy(menuLeft[menuLeft_elements++], BL_VerString);  // Show bootloader version
+        
+                
+      } else {
+        
+        // Hide bootloader version
+        strncpy(menuLeft[--menuLeft_elements], "        ", 9); // Copy 8 spaces and 1 null byte
+        
+          
+      }
+      
+      updateGUI = 1;        
+    }                
        
     
   } // while (1)
@@ -1719,7 +1735,6 @@ int menu_wifiStatus() {
 int menu_wifiAdmin() {
   
   
-  //cogGUI = cog_run(GUI, STACK_GUI);
   cogGUI = cogstart(GUI, NULL, STACK_GUI, sizeof(STACK_GUI));
   while (cogState_GUI != COG_RUNNING) { }
    
@@ -1741,6 +1756,7 @@ int menu_wifiAdmin() {
   // Right menu
   strcpy(menuRight[0], "NO");
   strcpy(menuRight[1], "CANCEL");
+  //strcpy(menuRight[1], GC_CANCEL);
   menuRight_elements = 2;  
   
   volatile int sure = 0;
@@ -2221,16 +2237,10 @@ int menu_wifiManualSearch() {
 	  // Update screen with results
 	  // Allow scroll through the networks
 	  
-	  //strcpy(OLED[2], "  Search Done!  ");
-	  //strcpy(OLED[3], "                ");
-	  //strcpy(OLED[4], " Found:");
-	  
-	  //wifiFoundCount = 123;
-	  
+	    
 	  
 	  clearOLED();
-  
-  
+     
   
   
   
@@ -2248,42 +2258,8 @@ int menu_wifiManualSearch() {
 	  
 	  //
   
-  
-  
-  
-  
-	  // ---
-	  
-	  //while(1) { }
-	 
-	 
-	 
-	  // Update display
-	  
-	  // TODO: !! This first if block is not needed- immediately replaced by new code below.
-	  // TODO: !! This will BREAK on zero AP's! FIX THAT!
-	  
- 
-	  if (wifiFoundCount > 1) {
-			  
-				  
-				  strcpy(OLED[0], " WiFi>        <>");
-											  
-				  
-	  } else { //if (wifiFoundCount == 1) {
-			  
-				  strcpy(OLED[0], " WiFi         <>");
-								
-				  
-	  } // if (wifiFoundCount > 1)
- 
- 
-	// ---
-  
-  
-  
-          
-                  
+    
+
     // Add CONNECT button
     strcpy(menuLeft[0], "CONNECT");
     //strcpy(menuLeft[0], "CANCEL");
@@ -2306,14 +2282,7 @@ int menu_wifiManualSearch() {
   
 	wifi_start(31, 30, 115200, WX_ALL_COM);
   
-  
-	// Call APGET once here, as sometimes the 1st call returns empty
-	//wifi_print(CMD, NULL, "%cAPGET:%d\r", CMD, 0);
-	//wifi_poll(&event, &id, &handle); // Important! Must poll after calling APGET, else the following scan of SSID will fail (REMOVE! Seems this oddness was fixed)
-	//wifi_scan(CMD, NULL, "%1s%d%d%1s%s", &_apStatusi, &_apEnc, &_apRSSI, &_apSSID, &_apSSID); // SSID twice to remove comma
-  
-
-
+ 
   
   
   // Clear nav flags
@@ -2475,8 +2444,8 @@ int menu_wifiManualSearch() {
 				  
 				  
 				  
-				// Update Top cursor, based on current idx
-				if (wifiFoundCount > 0) {
+				// v.1   Update Top cursor, based on current idx
+				/*if (wifiFoundCount > 0) {
 				   
 					if (ssidIdx == 0) {
 						
@@ -2491,7 +2460,56 @@ int menu_wifiManualSearch() {
 						strcpy(OLED[0], "<WiFi>        <>");
 					} 
 						   
-				}          
+				} */
+    
+    
+    
+         // v.2   Update Top cursor, based on current idx
+				/*if (wifiFoundCount > 0) {
+				   
+					if (ssidIdx == 0 && wifiFoundCount == 1) {
+						
+						strcpy(OLED[0], " WiFi           ");
+            
+            }  else if (ssidIdx == 0) {
+						
+						strcpy(OLED[0], " WiFi>          ");
+					  
+					} else if (ssidIdx == wifiFoundCount-1) {
+						
+						strcpy(OLED[0], "<WiFi           ");
+					  
+					} else {
+						
+						strcpy(OLED[0], "<WiFi>          ");
+					} 
+						   
+				} */ // ELSE no WiFi found... hide menu   
+    
+    
+        // v.3   Update Top cursor, based on current idx
+				if (wifiFoundCount > 1) {
+				   
+					if (ssidIdx == 0) {
+						
+						//strcpy(OLED[0], " WiFi>");
+						strncpy(OLED[0], " WiFi>", 6); 
+					  
+					} else if (ssidIdx == wifiFoundCount-1) {
+						
+						//strcpy(OLED[0], "<WiFi "); // Keep last space - fixed width - else prior char won't be cleared
+              strncpy(OLED[0], "<WiFi ", 6);
+					  
+					} else {
+						
+						//strcpy(OLED[0], "<WiFi>");
+              strncpy(OLED[0], "<WiFi>", 6);
+      
+					} 
+						   
+				}  // ELSE no WiFi found... no need to show menu  
+    
+               
 				  
 				  
 				// Redraw display now
@@ -2621,180 +2639,6 @@ void WiFiSearch(void *par) {
        
   }  
   
-  //cursor(0,3);
-  //oledprint("%c  %d  %d", event, id, wifiFoundCount);
-  
-  
-  
-  //waitcnt(CNT + CLKFREQ);
-  
-  
-  // ---
-  
-  // Ensure upper limit of found networks
-  //wifiFoundCount = (wifiFoundCount > SSIDMAX) ? SSIDMAX : wifiFoundCount;
-  
-  
-  
-  
-  
-  
-  
-  // ----------------------------------------------------------
-  
-  /*
-  event = 'X';
-  while ( (event != 'S') && (wifiSearchStatus == SEARCH_SEARCHING) ) {
-      
-      wifi_print(CMD, NULL, "%cSET:cmd-events,0\r", CMD); // Disable events
-      wifi_scan(CMD, NULL, "%1s%d", &event, &id); // Expect: S,0
-      
-      waitcnt(CNT + CLKFREQ/16);
-      //toggle(9);
-      
-  } 
-  */
-  
-  
-  
-  // ----------------------------------------------------------
-  
-  
-  // TODO: What is this poll in reponse to? ... disable events?
-  // Hmm.. is this intended API behaviour?
-  
-  //wifi_poll(&event, &id, &handle); // event = 'A', handle = %d (count of found AP's)
-  
-  
-  // ----------------------------------------------------------
-  
-  
-  
-  
-        
-  // Debug
-  /*cursor(0,2);
-  oledprint("                ");
-  cursor(0,2);
-  oledprint("%c  %d  %d", event, id, handle);*/
-        
-   
-      
-  // Once the A event has arrived, we can read the AP's found
-  
-  // APGET tips
-  // If call with wrong args, reply will be: E,x
-  // If no scan yet done/complete, reply will be: N,0
-  // If no data in the index requested, reply will be: E,x ( BUT MAYBE THIS FAILS? )
-  // If data exists for index requested, reply will be: S,%d,%s,%d", entry->enc, entry->ssid, entry->rssi
-  // example: S,3,OfficeWifi,211
-  // ...  where 3 is the encoding, 3 being "Password"
-  
-  // 0 = AUTH_OPEN          
-  // 1 = AUTH_WEP
-  // 2 = AUTH_WPA_PSK
-  // 3 = AUTH_WPA2_PSK
-  // 4 = AUTH_WPA_WPA2_PSK
-  // 5 = AUTH_MAX
-  
-  // S,3,palinkahordo,165    S,3,OfficeWiFi,206
-  
-  // palinkahordo very weak, OfficeWifi full signal.
-  // ... so not sure about how to interpret the RSSI value
-  
-
-  
-  
-  //waitcnt(CNT + CLKFREQ);
-  
-  
-  // NOTE: Badge firmware updated, such that APGET replies: S,3,202,OfficeWiFi<\r>
-  
-  //clear();
-  
-  
-  /*
-  for (volatile int idx = 0; idx < wifiFoundCount; idx++) {
-
-        //waitcnt(CNT + CLKFREQ);
-        
-        
-        wifi_print(CMD, NULL, "%cAPGET:%d\r", CMD, idx);
-        
-        
-        wifi_poll(&event, &id, &handle); // Important! Must poll after calling APGET, else the following scan of SSID will fail
-  
-        wifi_scan(CMD, NULL, "%1s%d%d%1s%s", &_apStatusi[idx], &_apEnc[idx], &_apRSSI[idx], &_apSSID[idx], &_apSSID[idx]); // SSID twice to remove comma
-        
-        
-        
-  } 
-  */
-  
-  /*
-  #ifdef TEST_SSID_EXTRA
-    
-    // Debug
-    
-    //strncpy(_apSSID[0], "GoneFi", 7); // Testing- use to ensure bagde doesn't break if active SSID missing during search
-    
-    
-    if (wifiFoundCount < SSIDMAX) { // Only add extra network if AP search found less than the absolute max aloud
-      
-      _apStatusi[wifiFoundCount] = 'S';
-      _apEnc[wifiFoundCount] = 3;
-      _apRSSI[wifiFoundCount] = 185;
-      //_apSSID[wifiFoundCount] = "Steal-Your-Social-Security-Numbr";
-      strncpy(_apSSID[wifiFoundCount], "Steal-Your-Social-Security-Numbr", 33);
-      //_apSSID[wifiFoundCount][32] = '\0';
-      ++wifiFoundCount;
-      
-    }
-    
-      
-    _apStatusi[wifiFoundCount] = 'S';
-    _apEnc[wifiFoundCount] = 3;
-    _apRSSI[wifiFoundCount] = 200;
-    //_apSSID[wifiFoundCount] = "HouseNtwk";
-    strncpy(_apSSID[wifiFoundCount], "HouseNtwk", 10);
-    //_apSSID[wifiFoundCount][10] = '\0';
-    ++wifiFoundCount;
-  
-  #endif
-  
-  
-  #ifdef TEST_SSID_NONE
-    
-    wifiFoundCount = 0;
-    
-  #endif
-  
-  
-  #ifdef TEST_SSID_ONLYONE
-  
-    wifiFoundCount = 1;
-  
-  #endif
-  */
-
-
-/*
-  // Clean up if ABORT
-  // Send the commands- don't bother with the reply in-case they're not good
-  if ( wifiSearchStatus != SEARCH_SEARCHING ) {
-    
-      wifi_print(CMD, NULL, "%cSET:cmd-events,0\r", CMD); // Disable events
-      //wifi_poll(&event, &id, &handle); // TODO: Not sure why this is required
-    
-  }    
-  */
-  
-  
-  
-  
-  // ---
-  
-  
   
   
   
@@ -2809,50 +2653,6 @@ void WiFiSearch(void *par) {
   
   
   
-  
-  
-  
-  // TODO: This gets stuck sometimes.... can't swap back to STA mode after APGET returns.
-  
-  
-  /*
-  if (cogState_GUI == COG_RUNNING) {
-				  
-						cogState_GUI = COG_STOP;
-						while (cogState_GUI != COG_STOPPED) { } // Wait for GUI to actually stop
-               waitcnt(CNT + CLKFREQ/1000);
-			  
-	}   
-  
-  int idx = 255;
-    
-  while (1) {
-    
-    idx = wifi_mode(STA);
-    cursor(0,0);
-    oledprint("%d", idx);
-    
-    idx = wifi_mode(STA);
-    cursor(0,1);
-    oledprint("%d", idx);
-    
-    idx = wifi_mode(STA);
-    cursor(0,2);
-    oledprint("%d", idx);
-    
-    idx = wifi_mode(STA);
-    cursor(0,3);
-    oledprint("%d", idx);
-    
-    waitcnt(CNT + CLKFREQ);
-  
-  }
-  
-
-  
-  while (1) { }
-  
-  */
   // ----------------------------------------------------------
   
   
@@ -2862,9 +2662,7 @@ void WiFiSearch(void *par) {
   
   wifi_stop();
   
-  //input(30); // Clear pins as possible solution to odd serial crash
-  //input(31);
-  
+    
   
   //wifiScanDone = 1; // Calling cog will block until this flag set
   wifiSearchStatus = SEARCH_COMPLETE; 
@@ -2908,61 +2706,11 @@ int menu_wifiConnect() {
   
   
   
-  /*else { // Ensure stored password is empty, as attempting connection to open network
-  
-        memset(_apPASS[0], '\0', sizeof(_apPASS[0]));  // Clear to null
-  
-  }*/
-
-
-
-  // Splash screen... this will quickly be replaced by the same screen content in the menu_start, once this func. completes.
-  // TODO: Consider progress bar
-  
-  /*cogGUI = cog_run(GUI, STACK_GUI);
-  while (cogState_GUI != COG_RUNNING) { }
-  
-  
-  //clearOLED(); // Clear OLED buffer
-  
-  strcpy(OLED[0], "              <>"); 
-  strcpy(OLED[1], "    Badge-WX    ");
-  
-  strcpy(OLED[3], "   Connecting   ");
-  strcpy(OLED[5], "   ..........   ");
-  //strcpy(OLED[4], "WiFi networks...");
-  
-  menuLeft_elements = 0;
-  menuRight_elements = 0;
-  
-  updateGUI = 1;
-  
-  
-  
-  
-  //waitcnt(CLKFREQ + CNT);
-  
-  
-  
-  cogState_GUI = COG_STOP;*/
 
   //wifi_stop();
   wifi_start(31, 30, 115200, WX_ALL_COM);
   
 
-  // TODO: NOT-EQUAL to STA fails here  (is STA defined to depricated value?) 
-  //while( wifi_mode(STA) == STA_AP ) { } 
-  
-  
-  
-  
-  //wifi_leave(STA); // Disconnect existing network (if any), then return in STA+AP mode
-  
-  // Warning! Do NOT stay long in STA+AP mode ! Security risk !
-  
-  //low(LED_PIN);
-  
-  
   
   
   // Disconnect from current network by switching to AP mode
@@ -3116,65 +2864,8 @@ int menu_wifiGetPassword() {
             
             
             // OK pressed
-            
-            // Try to connect
-            // If success, save pwd and AP ssid to file
-            
-            //high(LED_PIN);
-            
-            
-            //int passlen = cursorIdx - 1;
-            //RecalcPassLen(&passlen);
-            
-            //cursor(0,1);
-            //oledprint("%c", '[');
-            //oledprint("%d", passlen);
-            //oledprint("%c", ']');
-            
-            //strncpy(_apPASS, OLED[4], (cursorIdx+1));
-            
-            
-            //_apPASS[currentAPidx][(passlen+1)] = '\0';
-            
-            //cursor(0,2);
-            //oledprint("%c", '[');
-            //oledprint("%s", _apPASS[currentAPidx]);
-            //oledprint("%c", ']');
-             
-            
-            
-            //wifi_stop();
-            
-            
-            //cursor(0,1);
-            //oledprint("%c%d", '*', result);
-            //while (1) { }
-            
-            // Now what? 
-            
-            // Feedback on success or failure ?
-            
-            //if (result == 0) {
-              
-             // Success
-             
-              
-            //} else {
-              
-             // Failed to connect
-            
-            
-            //waitcnt(clkfreq + cnt);
-            
-            //low(LED_PIN);  
-              
-            //}                            
-            
-            // If success, save the login details to SD card
-            
-            // then what? back to 1st menu?
-            
-            validPassword = 1;
+			
+			validPassword = 1;
             
             return EXITCODE_CONNECT;
             
@@ -3210,30 +2901,7 @@ int menu_wifiGetPassword() {
       
       
       
-      // ******************************************************
-      /*strcpy(OLED[3], " Enter Password ");
-      updateGUI = 1;
       
-      while (1) {
-        
-        
-            if (menuSelectedRight == 1) {
-                
-                  
-                menuSelectedRight = 0;
-                
-                strncpy(_apPASS, "jollybiker", 11); // 10 chars + 1 null
-                validPassword = 1;
-                break;
-        
-            }            
-        
-      
-      } // while (1)
-              
-      */
-      
-      //return EXITCODE_CONNECT; // Try to connect now that password is stored!
       
   
 }
@@ -3337,7 +3005,7 @@ void SYS_TIMER(void *par) {
     
     cogState_SYS_TIMER = COG_BUSY;
     
-    while(cogState_SYS_TIMER == COG_BUSY && --milliseconds > 0) {  
+    while((cogState_SYS_TIMER == COG_BUSY) && (--milliseconds > 0)) {  
       waitcnt(CNT + CLKFREQ / 1000); // wait 1 millisecond  
     }    
     
@@ -3372,7 +3040,7 @@ void GUI_TIMER(void *par) {
     
     cogState_GUI_TIMER = COG_BUSY;
     
-    while(cogState_GUI_TIMER == COG_BUSY && --milliseconds > 0) {  
+    while((cogState_GUI_TIMER == COG_BUSY) && (--milliseconds > 0)) {  
       waitcnt(CNT + CLKFREQ / 1000); // wait 1 millisecond  
     }    
     
@@ -3845,6 +3513,8 @@ void GUI_ABC(void *par) {
         
                 // change Right menu to CANCEL!
                 strcpy(menuRight[0], "CANCEL");
+                //strcpy(menuRight[0], GC_CANCEL);
+                
                 oledWriteMenuRight(0);
         
         } else if ( (passwordIdxLast < 0) && (passwordIdx == 0) ) {      
